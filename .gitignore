@@ -1,0 +1,12 @@
+# Configuración local de IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+
+# Archivos compilados de Spring Boot
+/target/
+/build/
+/out/
+
+# Herramientas de arquitectura
+.architect
