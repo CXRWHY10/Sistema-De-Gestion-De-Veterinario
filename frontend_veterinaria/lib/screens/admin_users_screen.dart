@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/usuario_model.dart';
 import '../services/api_service.dart';
 import '../services/auth_storage.dart';
+import 'login_screen.dart';
 
 class AdminUsersScreen extends StatefulWidget {
   const AdminUsersScreen({super.key});
@@ -35,6 +36,22 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       _usuariosFuture = _apiService.listarUsuarios();
     });
   }
+  // Importa la pantalla de login en la parte superior de tu archivo si no la tienes
+  // import 'login_screen.dart';
+
+  void _cerrarSesion() async {
+    // 1. Eliminamos los datos guardados en el almacenamiento local
+    await _authStorage.deleteToken(); // Asegúrate de que este método exista en tu AuthStorage
+
+    if (!mounted) return;
+
+    // 2. Navegamos al Login y destruimos el historial de pantallas para que no pueda volver atrás
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+      (Route<dynamic> route) => false, // Esta condición elimina todas las rutas previas
+    );
+  }
 
   // Método para ejecutar la baja lógica (cambiar estado activo/inactivo)
   void _cambiarEstado(int idPersona) async {
@@ -59,56 +76,78 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     }
   }
 
-  void _mostrarDialogoPassword(Usuario usuario) {
-  final TextEditingController passController = TextEditingController();
+void _mostrarDialogoPassword(Usuario usuario) {
+    final TextEditingController passController = TextEditingController();
+    bool obscurePassword = true; // <--- Variable local para el modal
 
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      backgroundColor: const Color(0xFF132238),
-      title: Text('Nueva Contraseña para: ${usuario.usuario}', style: const TextStyle(color: Colors.white, fontSize: 16)),
-      content: TextField(
-        controller: passController,
-        obscureText: true,
-        style: const TextStyle(color: Colors.white),
-        decoration: const InputDecoration(
-          hintText: 'Escribe la nueva contraseña', 
-          hintStyle: TextStyle(color: Colors.white30)
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancelar', style: TextStyle(color: Colors.white60)),
-        ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00C896)),
-          onPressed: () async {
-            if (passController.text.isNotEmpty) {
-              try {
-                // Reutilizamos los datos actuales, inyectando la nueva contraseña y el ID del rol
-                Map<String, dynamic> datosActualizados = usuario.toJson();
-                datosActualizados['contrasena'] = passController.text.trim();
-                datosActualizados['idRol'] = usuario.rol.idRol; 
+    showDialog(
+      context: context,
+      builder: (context) {
+        // Envolvemos el AlertDialog en StatefulBuilder para poder cambiar el estado del icono
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF132238),
+              title: Text('Nueva Contraseña para: ${usuario.usuario}', style: const TextStyle(color: Colors.white, fontSize: 16)),
+              content: TextField(
+                controller: passController,
+                obscureText: obscurePassword, // <--- Usamos la variable aquí
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Escribe la nueva contraseña',
+                  hintStyle: const TextStyle(color: Colors.white30),
+                  
+                  // --- INICIO DEL ICONO DEL OJO ---
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      color: Colors.white38,
+                    ),
+                    onPressed: () {
+                      setStateDialog(() { // Usamos el setStateDialog del modal
+                        obscurePassword = !obscurePassword;
+                      });
+                    },
+                  ),
+                  // --- FIN DEL ICONO DEL OJO ---
+                  
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar', style: TextStyle(color: Colors.white60)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00C896)),
+                  onPressed: () async {
+                    if (passController.text.isNotEmpty) {
+                      try {
+                        Map<String, dynamic> datosActualizados = usuario.toJson();
+                        datosActualizados['contrasena'] = passController.text.trim();
+                        datosActualizados['idRol'] = usuario.rol.idRol;
 
-                await _apiService.actualizarUsuario(usuario.idPersona, datosActualizados);
-                
-                if (!mounted) return;
-                Navigator.pop(context); // Cierra el modal
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Contraseña actualizada exitosamente'), backgroundColor: Color(0xFF00C896))
-                );
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-              }
-            }
+                        await _apiService.actualizarUsuario(usuario.idPersona, datosActualizados);
+
+                        if (!mounted) return;
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Contraseña actualizada exitosamente'), backgroundColor: Color(0xFF00C896))
+                        );
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                      }
+                    }
+                  },
+                  child: const Text('Guardar', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
           },
-          child: const Text('Guardar', style: TextStyle(color: Colors.white)),
-        ),
-      ],
-    ),
-  );
-}
+        );
+      },
+    );
+  }
 void _mostrarDialogoNuevoUsuario() {
     final TextEditingController primerNombreController = TextEditingController();
     final TextEditingController segundoNombreController = TextEditingController();
@@ -234,9 +273,8 @@ void _mostrarDialogoNuevoUsuario() {
                           'celular': celularController.text.trim(),
                           'usuario': userController.text.trim(),
                           'contrasena': passController.text.trim(),
-                          'rol': {
-                            'idRol': rolSeleccionado
-                          },
+                          'idRol': rolSeleccionado,
+                    
                         };
 
                         await _apiService.crearUsuario(nuevoUsuarioData);
@@ -388,7 +426,7 @@ void _mostrarDialogoNuevoUsuario() {
                         ],
                       ),
                       Row(
-                        children: [
+children: [
                           Text(
                             _usuarioLogueado, // <--- Aquí se muestra dinámicamente el usuario logueado
                             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -398,6 +436,38 @@ void _mostrarDialogoNuevoUsuario() {
                             backgroundColor: Color(0xFF132238),
                             child: Icon(Icons.person, color: Colors.white),
                           ),
+                          const SizedBox(width: 16), // Espaciador
+                          
+                          // --- INICIO DEL BOTÓN DE CERRAR SESIÓN ---
+                          IconButton(
+                            icon: const Icon(Icons.logout, color: Colors.redAccent),
+                            tooltip: 'Cerrar Sesión',
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  backgroundColor: const Color(0xFF132238),
+                                  title: const Text('Cerrar Sesión', style: TextStyle(color: Colors.white)),
+                                  content: const Text('¿Estás seguro de que deseas salir del sistema?', style: TextStyle(color: Colors.white70)),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('Cancelar', style: TextStyle(color: Colors.white60)),
+                                    ),
+                                    ElevatedButton(
+                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+                                      onPressed: () {
+                                        Navigator.pop(context); // Cierra el modal
+                                        _cerrarSesion(); // Llama a tu función
+                                      },
+                                      child: const Text('Salir', style: TextStyle(color: Colors.white)),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                          // --- FIN DEL BOTÓN ---
                         ],
                       ),
                     ],
