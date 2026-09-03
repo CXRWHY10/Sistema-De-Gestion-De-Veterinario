@@ -1,6 +1,5 @@
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Importación para FilteringTextInputFormatter
+import 'package:flutter/services.dart';
 import '../models/usuario_model.dart';
 import '../services/api_service.dart';
 import '../services/auth_storage.dart';
@@ -28,6 +27,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
   void _cargarUsuarioLogueado() async {
     final nombre = await _authStorage.getUsername();
+    if (!mounted) return;
     setState(() {
       _usuarioLogueado = nombre ?? 'Administrador';
     });
@@ -41,7 +41,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
   void _cerrarSesion() async {
     await _authStorage.deleteToken();
-
     if (!mounted) return;
 
     Navigator.pushAndRemoveUntil(
@@ -73,297 +72,35 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     }
   }
 
-  // MÉTODOS DE VALIDACIÓN MODULARIZADOS
-  bool _esNombreValido(String texto) {
-    if (texto.trim().isEmpty) return true;
-    final RegExp regex = RegExp(r"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$");
-    return regex.hasMatch(texto.trim());
-  }
-
-  bool _esContrasenaValida(String password) {
-    final RegExp regex = RegExp(r'^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>_\-]).{8,}$');
-    return regex.hasMatch(password);
-  }
-
-  // FORMATTERS REUTILIZABLES PARA RESTRICCIÓN DE TECLADO
-  List<TextInputFormatter> get _sololetrasFormatter => [
-        FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]')),
-      ];
-
-  List<TextInputFormatter> get _soloNumerosFormatter => [
-        FilteringTextInputFormatter.digitsOnly, // Restringe la entrada a dígitos únicamente
-      ];
-
   void _mostrarDialogoPassword(Usuario usuario) {
-    final TextEditingController passController = TextEditingController();
-    bool obscurePassword = true;
-
     showDialog(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              backgroundColor: const Color(0xFF132238),
-              title: Text('Nueva Contraseña para: ${usuario.usuario}', style: const TextStyle(color: Colors.white, fontSize: 16)),
-              content: TextField(
-                controller: passController,
-                obscureText: obscurePassword,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: 'Escribe la nueva contraseña',
-                  hintStyle: const TextStyle(color: Colors.white30),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      obscurePassword ? Icons.visibility_off : Icons.visibility,
-                      color: Colors.white38,
-                    ),
-                    onPressed: () {
-                      setStateDialog(() {
-                        obscurePassword = !obscurePassword;
-                      });
-                    },
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancelar', style: TextStyle(color: Colors.white60)),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00C896)),
-                  onPressed: () async {
-                    final pass = passController.text.trim();
-                    if (!_esContrasenaValida(pass)) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('La contraseña debe tener mín. 8 caracteres, 1 mayúscula, 1 número y 1 carácter especial.'),
-                          backgroundColor: Colors.orange,
-                        ),
-                      );
-                      return;
-                    }
-
-                    try {
-                      Map<String, dynamic> datosActualizados = usuario.toJson();
-                      datosActualizados['contrasena'] = pass;
-                      datosActualizados['idRol'] = usuario.rol.idRol;
-
-                      await _apiService.actualizarUsuario(usuario.idPersona, datosActualizados);
-
-                      if (!mounted) return;
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Contraseña actualizada exitosamente'), backgroundColor: Color(0xFF00C896)),
-                      );
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-                    }
-                  },
-                  child: const Text('Guardar', style: TextStyle(color: Colors.white)),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _mostrarDialogoNuevoUsuario() {
-    final TextEditingController primerNombreController = TextEditingController();
-    final TextEditingController segundoNombreController = TextEditingController();
-    final TextEditingController primerApellidoController = TextEditingController();
-    final TextEditingController segundoApellidoController = TextEditingController();
-    final TextEditingController ciController = TextEditingController();
-    final TextEditingController complementoCiController = TextEditingController();
-    final TextEditingController celularController = TextEditingController();
-    final TextEditingController userController = TextEditingController();
-    final TextEditingController passController = TextEditingController();
-
-    int rolSeleccionado = 2;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              backgroundColor: const Color(0xFF132238),
-              title: const Text('Registrar Nuevo Usuario', style: TextStyle(color: Colors.white, fontSize: 18)),
-              content: SizedBox(
-                width: double.maxFinite,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('Datos Personales', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(child: _crearTextField(primerNombreController, 'Primer Nombre *', Icons.person, inputFormatters: _sololetrasFormatter)),
-                          const SizedBox(width: 10),
-                          Expanded(child: _crearTextField(segundoNombreController, 'Segundo Nombre (Opcional)', Icons.person_outline, inputFormatters: _sololetrasFormatter)),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(child: _crearTextField(primerApellidoController, 'Primer Apellido *', Icons.person, inputFormatters: _sololetrasFormatter)),
-                          const SizedBox(width: 10),
-                          Expanded(child: _crearTextField(segundoApellidoController, 'Segundo Apellido (Opcional)', Icons.person_outline, inputFormatters: _sololetrasFormatter)),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          // C.I. restrictivo solo a números
-                          Expanded(flex: 2, child: _crearTextField(ciController, 'C.I. *', Icons.badge, inputFormatters: _soloNumerosFormatter)),
-                          const SizedBox(width: 10),
-                          // Complemento se mantiene sin restricción estricta de números (admite ej. 1A)
-                          Expanded(flex: 1, child: _crearTextField(complementoCiController, 'Comp.', Icons.credit_card)),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      // Celular restrictivo solo a números
-                      _crearTextField(celularController, 'Celular *', Icons.phone, inputFormatters: _soloNumerosFormatter),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16.0),
-                        child: Divider(color: Colors.white24),
-                      ),
-                      const Text('Credenciales de Acceso', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 10),
-                      _crearTextField(userController, 'Nombre de Usuario *', Icons.account_circle),
-                      const SizedBox(height: 10),
-                      _crearTextField(passController, 'Contraseña *', Icons.lock, obscureText: true),
-                      const SizedBox(height: 16),
-                      DropdownButtonFormField<int>(
-                        value: rolSeleccionado,
-                        dropdownColor: const Color(0xFF0B1626),
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          labelText: 'Rol del Sistema *',
-                          labelStyle: const TextStyle(color: Colors.white60),
-                          prefixIcon: const Icon(Icons.security, color: Colors.white38),
-                          filled: true,
-                          fillColor: const Color(0xFF0B1626),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                        ),
-                        items: const [
-                          DropdownMenuItem(value: 1, child: Text('Administrador')),
-                          DropdownMenuItem(value: 2, child: Text('Médico')),
-                          DropdownMenuItem(value: 3, child: Text('Pasante')),
-                        ],
-                        onChanged: (value) {
-                          setStateDialog(() {
-                            rolSeleccionado = value!;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancelar', style: TextStyle(color: Colors.white60)),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00C896)),
-                  onPressed: () async {
-                    if (primerNombreController.text.trim().isEmpty ||
-                        primerApellidoController.text.trim().isEmpty ||
-                        ciController.text.trim().isEmpty ||
-                        celularController.text.trim().isEmpty ||
-                        userController.text.trim().isEmpty ||
-                        passController.text.trim().isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Llena todos los campos obligatorios (*)'), backgroundColor: Colors.orange),
-                      );
-                      return;
-                    }
-
-                    if (!_esNombreValido(primerNombreController.text) ||
-                        !_esNombreValido(segundoNombreController.text) ||
-                        !_esNombreValido(primerApellidoController.text) ||
-                        !_esNombreValido(segundoApellidoController.text)) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Los nombres y apellidos solo deben contener letras.'), backgroundColor: Colors.orange),
-                      );
-                      return;
-                    }
-
-                    if (!_esContrasenaValida(passController.text)) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('La contraseña debe contener mín. 8 caracteres, 1 mayúscula, 1 número y 1 carácter especial.'),
-                          backgroundColor: Colors.orange,
-                        ),
-                      );
-                      return;
-                    }
-
-                    try {
-                      final Map<String, dynamic> nuevoUsuarioData = {
-                        'primerNombre': primerNombreController.text.trim(),
-                        'segundoNombre': segundoNombreController.text.trim().isEmpty ? null : segundoNombreController.text.trim(),
-                        'primerApellido': primerApellidoController.text.trim(),
-                        'segundoApellido': segundoApellidoController.text.trim().isEmpty ? null : segundoApellidoController.text.trim(),
-                        'cedulaIdentidad': ciController.text.trim(),
-                        'complementoCi': complementoCiController.text.trim().isEmpty ? null : complementoCiController.text.trim(),
-                        'celular': celularController.text.trim(),
-                        'usuario': userController.text.trim(),
-                        'contrasena': passController.text.trim(),
-                        'idRol': rolSeleccionado,
-                      };
-
-                      await _apiService.crearUsuario(nuevoUsuarioData);
-
-                      if (!mounted) return;
-                      Navigator.pop(context);
-                      _cargarUsuarios();
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Usuario registrado exitosamente'), backgroundColor: Color(0xFF00C896)),
-                      );
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.redAccent),
-                      );
-                    }
-                  },
-                  child: const Text('Registrar', style: TextStyle(color: Colors.white)),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _crearTextField(
-    TextEditingController controller, 
-    String hint, 
-    IconData icon, 
-    {bool obscureText = false, List<TextInputFormatter>? inputFormatters}
-  ) {
-    return TextField(
-      controller: controller,
-      obscureText: obscureText,
-      inputFormatters: inputFormatters,
-      style: const TextStyle(color: Colors.white),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: Colors.white30, fontSize: 13),
-        prefixIcon: Icon(icon, color: Colors.white38, size: 18),
-        filled: true,
-        fillColor: const Color(0xFF0B1626),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      builder: (context) => _DialogoPassword(
+        usuario: usuario,
+        apiService: _apiService,
       ),
     );
+  }
+
+  void _mostrarDialogoNuevoUsuario() async {
+    try {
+      final usuariosActuales = await _usuariosFuture;
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (context) => _DialogoNuevoUsuario(
+          apiService: _apiService,
+          usuariosExistentes: usuariosActuales,
+          onUsuarioCreado: _cargarUsuarios,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al cargar datos previos: $e'), backgroundColor: Colors.redAccent),
+      );
+    }
   }
 
   Color _obtenerColorRol(String nombreRol) {
@@ -385,6 +122,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       backgroundColor: const Color(0xFF0D1B2A),
       body: Row(
         children: [
+          // Sidebar
           Container(
             width: 260,
             color: const Color(0xFF132238),
@@ -441,9 +179,12 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
               ],
             ),
           ),
+
+          // Panel Principal
           Expanded(
             child: Column(
               children: [
+                // Header Superior
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
                   color: Colors.white.withOpacity(0.02),
@@ -513,6 +254,8 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                     ],
                   ),
                 ),
+
+                // Tabla de Gestión
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.all(32.0),
@@ -551,13 +294,13 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                 ),
                                 icon: const Icon(Icons.person_add, size: 18),
                                 label: const Text('Nuevo Usuario'),
-                                onPressed: () {
-                                  _mostrarDialogoNuevoUsuario();
-                                },
+                                onPressed: _mostrarDialogoNuevoUsuario,
                               ),
                             ],
                           ),
                           const SizedBox(height: 24),
+
+                          // Cabecera de la Tabla
                           Container(
                             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                             decoration: BoxDecoration(
@@ -570,20 +313,13 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                 Expanded(flex: 3, child: Text('NOMBRE COMPLETO', style: TextStyle(color: Colors.white60, fontWeight: FontWeight.bold, fontSize: 12))),
                                 Expanded(flex: 2, child: Text('ROL ASIGNADO', style: TextStyle(color: Colors.white60, fontWeight: FontWeight.bold, fontSize: 12))),
                                 Expanded(flex: 2, child: Text('ESTADO', style: TextStyle(color: Colors.white60, fontWeight: FontWeight.bold, fontSize: 12))),
-                                Expanded(
-                                  flex: 1,
-                                  child: Align(
-                                    alignment: Alignment.centerRight,
-                                    child: Text(
-                                      'ACCIONES',
-                                      style: TextStyle(color: Colors.white60, fontWeight: FontWeight.bold, fontSize: 12),
-                                    ),
-                                  ),
-                                ),
+                                Expanded(flex: 1, child: Align(alignment: Alignment.centerRight, child: Text('ACCIONES', style: TextStyle(color: Colors.white60, fontWeight: FontWeight.bold, fontSize: 12)))),
                               ],
                             ),
                           ),
                           const SizedBox(height: 12),
+
+                          // Listado dinámico
                           Expanded(
                             child: FutureBuilder<List<Usuario>>(
                               future: _usuariosFuture,
@@ -610,6 +346,14 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                   itemCount: usuarios.length,
                                   itemBuilder: (context, index) {
                                     final usuario = usuarios[index];
+                                    
+                                    final nombreCompleto = [
+                                      usuario.primerNombre,
+                                      usuario.segundoNombre,
+                                      usuario.primerApellido,
+                                      usuario.segundoApellido
+                                    ].where((element) => element != null && element.trim().isNotEmpty).join(' ');
+
                                     return Container(
                                       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                                       margin: const EdgeInsets.only(bottom: 8),
@@ -628,7 +372,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                           Expanded(
                                             flex: 3,
                                             child: Text(
-                                              '${usuario.primerNombre} ${usuario.segundoNombre ?? ''} ${usuario.primerApellido}',
+                                              nombreCompleto,
                                               style: const TextStyle(color: Colors.white70),
                                             ),
                                           ),
@@ -682,9 +426,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                                                 IconButton(
                                                   icon: const Icon(Icons.key, color: Colors.amber, size: 18),
                                                   tooltip: 'Cambiar contraseña / Editar',
-                                                  onPressed: () {
-                                                    _mostrarDialogoPassword(usuario);
-                                                  },
+                                                  onPressed: () => _mostrarDialogoPassword(usuario),
                                                 ),
                                                 IconButton(
                                                   icon: Icon(
@@ -716,6 +458,474 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+// Modal para cambiar contraseña
+class _DialogoPassword extends StatefulWidget {
+  final Usuario usuario;
+  final ApiService apiService;
+
+  const _DialogoPassword({required this.usuario, required this.apiService});
+
+  @override
+  State<_DialogoPassword> createState() => _DialogoPasswordState();
+}
+
+class _DialogoPasswordState extends State<_DialogoPassword> {
+  late final TextEditingController _passController;
+  late final TextEditingController _confirmPassController;
+  bool _obscurePass = true;
+  bool _obscureConfirm = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _passController = TextEditingController();
+    _confirmPassController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _passController.dispose();
+    _confirmPassController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: const Color(0xFF132238),
+      title: Text('Nueva Contraseña para: ${widget.usuario.usuario}', style: const TextStyle(color: Colors.white, fontSize: 16)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _passController,
+            obscureText: _obscurePass,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Escribe la nueva contraseña',
+              hintStyle: const TextStyle(color: Colors.white30, fontSize: 13),
+              suffixIcon: IconButton(
+                icon: Icon(_obscurePass ? Icons.visibility_off : Icons.visibility, color: Colors.white38),
+                onPressed: () => setState(() => _obscurePass = !_obscurePass),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _confirmPassController,
+            obscureText: _obscureConfirm,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Confirma la nueva contraseña',
+              hintStyle: const TextStyle(color: Colors.white30, fontSize: 13),
+              suffixIcon: IconButton(
+                icon: Icon(_obscureConfirm ? Icons.visibility_off : Icons.visibility, color: Colors.white38),
+                onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+              ),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar', style: TextStyle(color: Colors.white60)),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00C896)),
+          onPressed: () async {
+            final pass = _passController.text.trim();
+            final confirm = _confirmPassController.text.trim();
+
+            if (pass.isEmpty || confirm.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('No se puede dejar la contraseña vacía'), backgroundColor: Colors.orange),
+              );
+              return;
+            }
+
+            if (pass != confirm) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Las contraseñas no coinciden'), backgroundColor: Colors.redAccent),
+              );
+              return;
+            }
+
+            try {
+              Map<String, dynamic> datosActualizados = widget.usuario.toJson();
+              datosActualizados['contrasena'] = pass;
+              datosActualizados['idRol'] = widget.usuario.rol.idRol;
+
+              await widget.apiService.actualizarUsuario(widget.usuario.idPersona, datosActualizados);
+
+              if (!mounted) return;
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Contraseña actualizada exitosamente'), backgroundColor: Color(0xFF00C896)),
+              );
+            } catch (e) {
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+            }
+          },
+          child: const Text('Guardar', style: TextStyle(color: Colors.white)),
+        ),
+      ],
+    );
+  }
+}
+
+// Modal de Creación Compacto con Validaciones Blindadas
+class _DialogoNuevoUsuario extends StatefulWidget {
+  final ApiService apiService;
+  final List<Usuario> usuariosExistentes;
+  final VoidCallback onUsuarioCreado;
+
+  const _DialogoNuevoUsuario({
+    required this.apiService,
+    required this.usuariosExistentes,
+    required this.onUsuarioCreado,
+  });
+
+  @override
+  State<_DialogoNuevoUsuario> createState() => _DialogoNuevoUsuarioState();
+}
+
+class _DialogoNuevoUsuarioState extends State<_DialogoNuevoUsuario> {
+  final _primerNombreController = TextEditingController();
+  final _segundoNombreController = TextEditingController();
+  final _primerApellidoController = TextEditingController();
+  final _segundoApellidoController = TextEditingController();
+  final _ciController = TextEditingController();
+  final _complementoCiController = TextEditingController();
+  final _celularController = TextEditingController();
+  final _userController = TextEditingController();
+  final _passController = TextEditingController();
+  final _confirmPassController = TextEditingController();
+
+  int _rolSeleccionado = 3; // ID 3 = Médico por defecto
+  bool _obscurePass = true;
+  bool _obscureConfirmPass = true;
+
+  @override
+  void dispose() {
+    _primerNombreController.dispose();
+    _segundoNombreController.dispose();
+    _primerApellidoController.dispose();
+    _segundoApellidoController.dispose();
+    _ciController.dispose();
+    _complementoCiController.dispose();
+    _celularController.dispose();
+    _userController.dispose();
+    _passController.dispose();
+    _confirmPassController.dispose();
+    super.dispose();
+  }
+
+  Widget _crearTextField(
+    TextEditingController controller,
+    String hint,
+    IconData icon, {
+    bool isOnlyText = false,         // Bloquea números/símbolos
+    bool isNumericOnly = false,       // Bloquea letras
+    bool isAlphanumericUpper = false,   // Para complemento
+    bool isPassword = false,
+    bool isConfirmPassword = false,
+    int? maxLength,
+  }) {
+    bool obscureCurrent = isPassword ? _obscurePass : _obscureConfirmPass;
+
+    List<TextInputFormatter>? formatters;
+    if (isOnlyText) {
+      formatters = [
+        FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]')),
+      ];
+    } else if (isNumericOnly) {
+      formatters = [
+        FilteringTextInputFormatter.digitsOnly,
+        if (maxLength != null) LengthLimitingTextInputFormatter(maxLength),
+      ];
+    } else if (isAlphanumericUpper) {
+      formatters = [
+        FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
+        UpperCaseTextFormatter(),
+        if (maxLength != null) LengthLimitingTextInputFormatter(maxLength),
+      ];
+    }
+
+    return TextField(
+      controller: controller,
+      obscureText: (isPassword || isConfirmPassword) ? obscureCurrent : false,
+      keyboardType: isNumericOnly ? TextInputType.number : TextInputType.text,
+      inputFormatters: formatters,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(color: Colors.white30, fontSize: 13),
+        prefixIcon: Icon(icon, color: Colors.white38, size: 18),
+        suffixIcon: (isPassword || isConfirmPassword)
+            ? IconButton(
+                icon: Icon(
+                  obscureCurrent ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.white38,
+                  size: 18,
+                ),
+                onPressed: () {
+                  setState(() {
+                    if (isPassword) {
+                      _obscurePass = !_obscurePass;
+                    } else {
+                      _obscureConfirmPass = !_obscureConfirmPass;
+                    }
+                  });
+                },
+              )
+            : null,
+        filled: true,
+        fillColor: const Color(0xFF0B1626),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: const Color(0xFF132238),
+      title: const Text('Registrar Nuevo Usuario', style: TextStyle(color: Colors.white, fontSize: 18)),
+      content: SizedBox(
+        width: 650,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Datos Personales', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              
+              // FILA 1: Nombres (Solo Texto)
+              Row(
+                children: [
+                  Expanded(child: _crearTextField(_primerNombreController, 'Primer Nombre *', Icons.person, isOnlyText: true)),
+                  const SizedBox(width: 10),
+                  Expanded(child: _crearTextField(_segundoNombreController, 'Segundo Nombre (Opcional)', Icons.person_outline, isOnlyText: true)),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // FILA 2: Apellidos (Solo Texto)
+              Row(
+                children: [
+                  Expanded(child: _crearTextField(_primerApellidoController, 'Primer Apellido *', Icons.person, isOnlyText: true)),
+                  const SizedBox(width: 10),
+                  Expanded(child: _crearTextField(_segundoApellidoController, 'Segundo Apellido (Opcional)', Icons.person_outline, isOnlyText: true)),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // FILA 3: C.I., Comp. y Celular
+              Row(
+                children: [
+                  Expanded(flex: 3, child: _crearTextField(_ciController, 'C.I. *', Icons.badge, isNumericOnly: true, maxLength: 9)),
+                  const SizedBox(width: 8),
+                  Expanded(flex: 2, child: _crearTextField(_complementoCiController, 'Comp.', Icons.credit_card, isAlphanumericUpper: true, maxLength: 2)),
+                  const SizedBox(width: 8),
+                  Expanded(flex: 4, child: _crearTextField(_celularController, 'Celular * (7-8 dígitos)', Icons.phone, isNumericOnly: true, maxLength: 8)),
+                ],
+              ),
+              
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12.0),
+                child: Divider(color: Colors.white24),
+              ),
+
+              const Text('Credenciales de Acceso', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+
+              // FILA 4: Usuario y Rol
+              Row(
+                children: [
+                  Expanded(
+                    child: _crearTextField(_userController, 'Nombre de Usuario *', Icons.account_circle),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: DropdownButtonFormField<int>(
+                      value: _rolSeleccionado,
+                      dropdownColor: const Color(0xFF0B1626),
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        labelText: 'Rol del Sistema *',
+                        labelStyle: const TextStyle(color: Colors.white60),
+                        prefixIcon: const Icon(Icons.security, color: Colors.white38, size: 18),
+                        filled: true,
+                        fillColor: const Color(0xFF0B1626),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 1, child: Text('Administrador')),
+                        DropdownMenuItem(value: 2, child: Text('Pasante')),
+                        DropdownMenuItem(value: 3, child: Text('Médico')),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => _rolSeleccionado = value);
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // FILA 5: Contraseñas
+              Row(
+                children: [
+                  Expanded(child: _crearTextField(_passController, 'Contraseña *', Icons.lock, isPassword: true)),
+                  const SizedBox(width: 10),
+                  Expanded(child: _crearTextField(_confirmPassController, 'Confirmar Contraseña *', Icons.lock_outline, isConfirmPassword: true)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar', style: TextStyle(color: Colors.white60)),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00C896)),
+          onPressed: () async {
+            final pNombre = _primerNombreController.text.trim();
+            final pApellido = _primerApellidoController.text.trim();
+            final ciTexto = _ciController.text.trim();
+            final celularTexto = _celularController.text.trim();
+            final usuarioTexto = _userController.text.trim();
+            final passTexto = _passController.text.trim();
+            final confirmPassTexto = _confirmPassController.text.trim();
+
+            if (pNombre.isEmpty || pApellido.isEmpty || ciTexto.isEmpty || celularTexto.isEmpty || usuarioTexto.isEmpty || passTexto.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('No se puede dejar campos vacíos (* Obligatorios)'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+              return;
+            }
+
+            if (ciTexto.length < 7) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('El C.I. debe tener al menos 7 dígitos válidos'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+              return;
+            }
+
+            if (celularTexto.length < 7 || celularTexto.length > 8) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('El celular debe tener entre 7 y 8 dígitos válidos'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+              return;
+            }
+
+            if (passTexto != confirmPassTexto) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Las contraseñas no coinciden. Por favor verifica.'),
+                  backgroundColor: Colors.redAccent,
+                ),
+              );
+              return;
+            }
+
+            // Validaciones de Unicidad
+            final ciExistente = widget.usuariosExistentes.any(
+              (u) => u.cedulaIdentidad.trim() == ciTexto,
+            );
+            if (ciExistente) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Ya existe un usuario registrado con este C.I.'), backgroundColor: Colors.orange),
+              );
+              return;
+            }
+
+            final celularExistente = widget.usuariosExistentes.any(
+              (u) => u.celular.trim() == celularTexto,
+            );
+            if (celularExistente) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Ya existe un usuario registrado con este número de celular'), backgroundColor: Colors.orange),
+              );
+              return;
+            }
+
+            final userExistente = widget.usuariosExistentes.any(
+              (u) => u.usuario.trim().toLowerCase() == usuarioTexto.toLowerCase(),
+            );
+            if (userExistente) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('El nombre de usuario ya no está disponible'), backgroundColor: Colors.orange),
+              );
+              return;
+            }
+
+            try {
+              final Map<String, dynamic> nuevoUsuarioData = {
+                'primerNombre': pNombre,
+                'segundoNombre': _segundoNombreController.text.trim().isEmpty ? null : _segundoNombreController.text.trim(),
+                'primerApellido': pApellido,
+                'segundoApellido': _segundoApellidoController.text.trim().isEmpty ? null : _segundoApellidoController.text.trim(),
+                'cedulaIdentidad': ciTexto,
+                'complementoCi': _complementoCiController.text.trim().isEmpty ? null : _complementoCiController.text.trim(),
+                'celular': celularTexto,
+                'usuario': usuarioTexto,
+                'contrasena': passTexto,
+                'idRol': _rolSeleccionado,
+              };
+
+              await widget.apiService.crearUsuario(nuevoUsuarioData);
+
+              if (!mounted) return;
+              Navigator.of(context).pop();
+              widget.onUsuarioCreado();
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Usuario registrado exitosamente'), backgroundColor: Color(0xFF00C896)),
+              );
+            } catch (e) {
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Error al registrar usuario: $e'), backgroundColor: Colors.redAccent),
+              );
+            }
+          },
+          child: const Text('Registrar', style: TextStyle(color: Colors.white)),
+        ),
+      ],
+    );
+  }
+}
+
+// Formateador auxiliar para convertir el complemento del CI a mayúsculas
+class UpperCaseTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    return TextEditingValue(
+      text: newValue.text.toUpperCase(),
+      selection: newValue.selection,
     );
   }
 }
