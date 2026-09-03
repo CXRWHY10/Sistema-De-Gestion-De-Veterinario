@@ -20,7 +20,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final AuthStorage _authStorage = AuthStorage();
 
   bool _isLoading = false;
-  bool _obscurePassword = true;
 
  void _handleLogin() async {
     final String usuario = _userController.text.trim();
@@ -195,23 +194,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 8),
                     TextField(
                       controller: _passwordController,
-                      obscureText: _obscurePassword,
+                      obscureText: true,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
                         hintText: '••••••••',
                         hintStyle: const TextStyle(color: Colors.white30),
                         prefixIcon: const Icon(Icons.lock, color: Colors.white38),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                            color: Colors.white38,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword; // Alterna el estado
-                            });
-                          },
-                        ),
                         filled: true,
                         fillColor: const Color(0xFF0B1626),
                         border: OutlineInputBorder(
