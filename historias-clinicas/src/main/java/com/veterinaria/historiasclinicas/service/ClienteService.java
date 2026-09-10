@@ -25,6 +25,11 @@ public class ClienteService {
     // CREATE: Crear cliente con al menos una mascota obligatoria
     @Transactional
     public Cliente crearClienteConMascota(ClienteRegistroRequestDTO request) {
+        // Validar si ya existe un cliente con el mismo número de carnet
+        if (clienteRepository.existsByCedulaIdentidad(request.getCedulaIdentidad())) {
+            throw new IllegalArgumentException("Ya existe un cliente registrado con este número de carnet.");
+        }
+
         if (request.getMascotas() == null || request.getMascotas().isEmpty()) {
             throw new IllegalArgumentException("El cliente debe tener registrada al menos una mascota obligatoriamente.");
         }

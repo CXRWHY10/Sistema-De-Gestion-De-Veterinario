@@ -27,13 +27,13 @@ public class Persona {
     @Column(name = "segundo_apellido", length = 50)
     private String segundoApellido;
 
-    @Column(name = "cedula_identidad", nullable = false, length = 10)
+    @Column(name = "cedula_identidad", nullable = false, unique = true, length = 20)
     private String cedulaIdentidad;
 
     @Column(name = "complemento_ci", length = 5)
     private String complementoCi;
 
-    @Column(name = "celular", nullable = false, length = 8)
+    @Column(name = "celular", nullable = false, unique = true, length = 8)
     private String celular;
 
 }

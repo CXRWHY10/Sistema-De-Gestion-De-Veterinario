@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@CrossOrigin(origins = "*") // <-- ¡AGREGAR ESTA LÍNEA OBLIGATORIA!
 @RestController
 @RequestMapping("/api/clientes")
 public class ClienteController {

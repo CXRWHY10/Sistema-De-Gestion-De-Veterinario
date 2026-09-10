@@ -42,11 +42,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         // Si tenemos un usuario y aún no está autenticado en el contexto de seguridad
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             if (jwtUtil.isTokenValid(jwt, username)) {
-                // Extraemos el rol que guardamos en el token (ej: "ADMINISTRADOR")
+                // Extraemos el rol que guardamos en el token
                 String role = jwtUtil.extractRole(jwt);
 
-                // Spring Security requiere el prefijo "ROLE_" para evaluar los permisos
-                SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role);
+                // Verificamos si ya trae el prefijo ROLE_ para evitar duplicarlo (ej: ROLE_ROLE_ADMINISTRADOR)
+                String roleAuthority = (role != null && role.startsWith("ROLE_")) ? role : "ROLE_" + role;
+                SimpleGrantedAuthority authority = new SimpleGrantedAuthority(roleAuthority);
 
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         username, null, Collections.singletonList(authority)

@@ -3,6 +3,7 @@ package com.veterinaria.historiasclinicas.security;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -28,11 +29,13 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // 1. HABILITAMOS CORS AQUÍ
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/api/roles/**").permitAll()
+                        // 👇 PERMITIR TODO EL ACCESO A /api/clientes (GET, POST, PUT, etc.) TEMPORALMENTE
+                        .requestMatchers("/api/clientes/**").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/usuarios/**").hasRole("ADMINISTRADOR")
                         .anyRequest().authenticated()
                 )
@@ -49,7 +52,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Permite que cualquier frontend local se conecte (React, Angular, Vue, etc.)
+        // Permite que cualquier frontend local se conecte (React, Angular, Vue, Flutter, etc.)
         configuration.setAllowedOriginPatterns(Arrays.asList("*"));
 
         // Métodos HTTP permitidos
@@ -64,6 +67,7 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
