@@ -4,6 +4,7 @@ import '../models/usuario_model.dart';
 import '../services/api_service.dart';
 import '../services/auth_storage.dart';
 import 'login_screen.dart';
+import 'registrar_cliente_page.dart';
 
 class AdminUsersScreen extends StatefulWidget {
   const AdminUsersScreen({super.key});
@@ -175,6 +176,19 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                   title: const Text('CRUD de Usuarios', style: TextStyle(color: Colors.white)),
                   tileColor: Colors.white.withOpacity(0.05),
                   onTap: () {},
+                ),
+                Material(
+                  color: Colors.transparent,
+                  child: ListTile(
+                    leading: const Icon(Icons.pets, color: Color(0xFF00C896)),
+                    title: const Text('Registrar Cliente', style: TextStyle(color: Colors.white70)),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const RegistrarClientePage()),
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
