@@ -1,12 +1,17 @@
-# Configuración local de IntelliJ IDEA
+# Base de datos local
+*.db
+*.db-journal
+
+# Flutter / Dart
+.dart_tool/
+build/
+.pub/
+
+# Maven / Spring Boot
+target/
+*.class
+
+# IDEs / Sistema
 .idea/
+.vscode/
 *.iml
-*.iws
-
-# Archivos compilados de Spring Boot
-/target/
-/build/
-/out/
-
-# Herramientas de arquitectura
-.architect
