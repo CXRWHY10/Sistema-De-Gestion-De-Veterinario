@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Bases de datos y archivos de SQLite
+*.db
+*.db-shm
+*.db-wal
+*.sqbpro
