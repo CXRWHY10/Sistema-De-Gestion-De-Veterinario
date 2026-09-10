@@ -10,8 +10,7 @@ import lombok.NoArgsConstructor;
 @Inheritance(strategy = InheritanceType.JOINED)
 public class Persona {
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "persona_seq")
-    @SequenceGenerator(name = "persona_seq", sequenceName = "persona_id_persona_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // Cambiado a IDENTITY
     @Column(name = "id_persona")
     private Integer idPersona;
 
@@ -35,5 +34,4 @@ public class Persona {
 
     @Column(name = "celular", nullable = false, unique = true, length = 8)
     private String celular;
-
 }

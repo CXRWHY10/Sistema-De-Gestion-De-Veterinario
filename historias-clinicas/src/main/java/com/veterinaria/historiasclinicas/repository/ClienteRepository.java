@@ -9,5 +9,5 @@ public interface ClienteRepository extends JpaRepository<Cliente, Integer> {
 
     // Método para verificar si ya existe una persona registrada con el mismo número de carnet
     boolean existsByCedulaIdentidad(String cedulaIdentidad);
-
+    boolean existsByCelular(String celular);
 }

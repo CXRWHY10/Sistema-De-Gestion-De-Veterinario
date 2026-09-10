@@ -30,6 +30,11 @@ public class ClienteService {
             throw new IllegalArgumentException("Ya existe un cliente registrado con este número de carnet.");
         }
 
+        // Validar si ya existe un cliente con el mismo número de celular
+        if (clienteRepository.existsByCelular(request.getCelular())) {
+            throw new IllegalArgumentException("Ya existe un cliente registrado con este número de celular.");
+        }
+
         if (request.getMascotas() == null || request.getMascotas().isEmpty()) {
             throw new IllegalArgumentException("El cliente debe tener registrada al menos una mascota obligatoriamente.");
         }
